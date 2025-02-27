@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris - Arcade de Jeux</title>
+    <link rel="stylesheet" href="../styles/main.css">
+    <style>
+        .tetris-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 auto;
+            max-width: 800px;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 300px;
+            margin-bottom: 20px;
+        }
+        
+        #tetris-canvas {
+            border: 2px solid #333;
+            background-color: #111;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .controls p {
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            #tetris-canvas {
+                width: 250px;
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Arcade de Jeux</h1>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Accueil</a></li>
+                <li><a href="sudoku.html">Sudoku</a></li>
+                <li><a href="tetris.html" class="active">Tetris</a></li>
+                <li><a href="memory.html">Memory</a></li>
+                <li><a href="snake.html">Snake</a></li>
+                <li><a href="feedback.html">Retour</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="game-container">
+            <h2 class="game-title">Tetris</h2>
+            
+            <div class="tetris-container">
+                <div class="game-info">
+                    <div class="score">Score: <span id="score">0</span></div>
+                    <div class="level">Niveau: <span id="level">1</span></div>
+                </div>
+                
+                <canvas id="tetris-canvas" width="300" height="600"></canvas>
+                
+                <div class="controls">
+                    <p>Commandes:</p>
+                    <p>← → : Déplacer | ↑ : Rotation | ↓ : Descente rapide | Espace : Chute</p>
+                    <button id="start-button" class="btn">Démarrer</button>
+                    <button id="pause-button" class="btn">Pause</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Arcade de Jeux. Tous droits réservés.</p>
+        <p><a href="feedback.html">Donnez-nous votre avis</a></p>
+    </footer>
+    
+    <script>
+        // Tetris Game Logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('tetris-canvas');
+            const ctx = canvas.getContext('2d');
+            const scoreElement = document.getElementById('score');
+            const levelElement = document.getElementById('level');
+            const startButton = document.getElementById('start-button');
+            const pauseButton = document.getElementById('pause-button');
+            
+            // Game settings
+            const blockSize = 30;
+            const rows = 20;
+            const cols = 10;
+            let score = 0;
+            let level = 1;
+            let gameSpeed = 1000; // Initial speed in milliseconds
+            let gameInterval;
+            let isPaused = false;
+            let isGameOver = true;
+            
+            // Tetromino shapes and colors
+            const shapes = [
+                // I
+                [
+                    [0, 0, 0, 0],
+                    [1, 1, 1, 1],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                // J
+                [
+                    [1, 0, 0],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                // L
+                [
+                    [0, 0, 1],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                // O
+                [
+                    [1, 1],
+                    [1, 1]
+                ],
+                // S
+                [
+                    [0, 1, 1],
+                    [1, 1, 0],
+                    [0, 0, 0]
+                ],
+                // T
+                [
+                    [0, 1, 0],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                // Z
+                [
+                    [1, 1, 0],
+                    [0, 1, 1],
+                    [0, 0, 0]
+                ]
+            ];
+            
+            const colors = [
+                "#00FFFF", // cyan (I)
+                "#0000FF", // blue (J)
+                "#FF8000", // orange (L)
+                "#FFFF00", // yellow (O)
+                "#00FF00", // green (S)
+                "#800080", // purple (T)
+                "#FF0000"  // red (Z)
+            ];
+            
+            // Game board
+            let board = [];
+            
+            // Current falling tetromino
+            let currentTetromino;
+            let currentX;
+            let currentY;
+            let currentColor;
+            
+            // Initialize game board
+            function initBoard() {
+                board = Array.from({length: rows}, () => Array(cols).fill(0));
+            }
+            
+            // Create a new tetromino
+            function newTetromino() {
+                const shapeIndex = Math.floor(Math.random() * shapes.length);
+                currentTetromino = shapes[shapeIndex];
+                currentColor = colors[shapeIndex];
+                currentX = Math.floor(cols / 2) - Math.floor(currentTetromino[0].length / 2);
+                currentY = 0;
+                
+                // Check if the new tetromino can be placed
+                if (!isValidMove(0, 0)) {
+                    gameOver();
+                }
+            }
+            
+            // Check if the move is valid
+            function isValidMove(offsetX, offsetY, newTetromino = currentTetromino) {
+                for (let y = 0; y < newTetromino.length; y++) {
+                    for (let x = 0; x < newTetromino[y].length; x++) {
+                        if (newTetromino[y][x]) {
+                            const newX = currentX + x + offsetX;
+                            const newY = currentY + y + offsetY;
+                            
+                            if (newX < 0 || newX >= cols || newY >= rows) {
+                                return false;
+                            }
+                            
+                            if (newY >= 0 && board[newY][newX]) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            // Rotate the tetromino
+            function rotate() {
+                const rotated = [];
+                for (let i = 0; i < currentTetromino[0].length; i++) {
+                    rotated.push([]);
+                    for (let j = currentTetromino.length - 1; j >= 0; j--) {
+                        rotated[i].push(currentTetromino[j][i]);
+                    }
+                }
+                
+                if (isValidMove(0, 0, rotated)) {
+                    currentTetromino = rotated;
+                }
+            }
+            
+            // Move the tetromino down
+            function moveDown() {
+                if (!isPaused && !isGameOver) {
+                    if (isValidMove(0, 1)) {
+                        currentY++;
+                    } else {
+                        lockTetromino();
+                        clearLines();
+                        newTetromino();
+                    }
+                    draw();
+                }
+            }
+            
+            // Move the tetromino left
+            function moveLeft() {
+                if (!isPaused && !isGameOver && isValidMove(-1, 0)) {
+                    currentX--;
+                    draw();
+                }
+            }
+            
+            // Move the tetromino right
+            function moveRight() {
+                if (!isPaused && !isGameOver && isValidMove(1, 0)) {
+                    currentX++;
+                    draw();
+                }
+            }
+            
+            // Drop the tetromino directly down
+            function hardDrop() {
+                if (!isPaused && !isGameOver) {
+                    while (isValidMove(0, 1)) {
+                        currentY++;
+                        score += 2; // Bonus points for hard drop
+                    }
+                    scoreElement.textContent = score;
+                    lockTetromino();
+                    clearLines();
+                    newTetromino();
+                    draw();
+                }
+            }
+            
+            // Lock the tetromino in place
+            function lockTetromino() {
+                for (let y = 0; y < currentTetromino.length; y++) {
+                    for (let x = 0; x < currentTetromino[y].length; x++) {
+                        if (currentTetromino[y][x]) {
+                            const boardY = currentY + y;
+                            if (boardY >= 0) {
+                                board[boardY][currentX + x] = currentColor;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Clear completed lines
+            function clearLines() {
+                let linesCleared = 0;
+                
+                for (let y = rows - 1; y >= 0; y--) {
+                    let lineComplete = true;
+                    
+                    for (let x = 0; x < cols; x++) {
+                        if (!board[y][x]) {
+                            lineComplete = false;
+                            break;
+                        }
+                    }
+                    
+                    if (lineComplete) {
+                        linesCleared++;
+                        
+                        // Remove the line and add a new empty line at the top
+                        for (let yy = y; yy > 0; yy--) {
+                            for (let x = 0; x < cols; x++) {
+                                board[yy][x] = board[yy - 1][x];
+                            }
+                        }
+                        
+                        // Clear the top line
+                        for (let x = 0; x < cols; x++) {
+                            board[0][x] = 0;
+                        }
+                        
+                        // Check the same line again
+                        y++;
+                    }
+                }
+                
+                // Score calculation
+                if (linesCleared > 0) {
+                    const points = [0, 100, 300, 500, 800];
+                    score += points[linesCleared] * level;
+                    scoreElement.textContent = score;
+                    
+                    // Level up every 10 lines
+                    if (score >= level * 1000) {
+                        level++;
+                        levelElement.textContent = level;
+                        gameSpeed = Math.max(100, 1000 - (level - 1) * 100);
+                        clearInterval(gameInterval);
+                        gameInterval = setInterval(moveDown, gameSpeed);
+                    }
+                }
+            }
+            
+            // Draw the game board
+            function draw() {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw the board
+                for (let y = 0; y < rows; y++) {
+                    for (let x = 0; x < cols; x++) {
+                        if (board[y][x]) {
+                            drawBlock(x, y, board[y][x]);
+                        }
+                    }
+                }
+                
+                // Draw the current tetromino
+                if (!isGameOver) {
+                    for (let y = 0; y < currentTetromino.length; y++) {
+                        for (let x = 0; x < currentTetromino[y].length; x++) {
+                            if (currentTetromino[y][x]) {
+                                if (currentY + y >= 0) {
+                                    drawBlock(currentX + x, currentY + y, currentColor);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Draw grid lines
+                ctx.strokeStyle = "#333";
+                ctx.lineWidth = 0.5;
+                
+                for (let y = 0; y <= rows; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * blockSize);
+                    ctx.lineTo(cols * blockSize, y * blockSize);
+                    ctx.stroke();
+                }
+                
+                for (let x = 0; x <= cols; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * blockSize, 0);
+                    ctx.lineTo(x * blockSize, rows * blockSize);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw a single block
+            function drawBlock(x, y, color) {
+                ctx.fillStyle = color;
+                ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+                ctx.strokeStyle = "#000";
+                ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+            }
+            
+            // Game over
+            function gameOver() {
+                isGameOver = true;
+                clearInterval(gameInterval);
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#fff";
+                ctx.font = "30px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+                ctx.font = "20px Arial";
+                ctx.fillText("Score: " + score, canvas.width / 2, canvas.height / 2 + 40);
+                ctx.fillText("Cliquez sur Démarrer pour rejouer", canvas.width / 2, canvas.height / 2 + 80);
+            }
+            
+            // Start a new game
+            function startGame() {
+                clearInterval(gameInterval);
+                initBoard();
+                score = 0;
+                level = 1;
+                gameSpeed = 1000;
+                isGameOver = false;
+                isPaused = false;
+                
+                scoreElement.textContent = score;
+                levelElement.textContent = level;
+                
+                newTetromino();
+                draw();
+                
+                gameInterval = setInterval(moveDown, gameSpeed);
+                
+                pauseButton.textContent = "Pause";
+            }
+            
+            // Pause/resume game
+            function togglePause() {
+                if (!isGameOver) {
+                    isPaused = !isPaused;
+                    
+                    if (isPaused) {
+                        clearInterval(gameInterval);
+                        pauseButton.textContent = "Reprendre";
+                        
+                        // Draw pause overlay
+                        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = "#fff";
+                        ctx.font = "30px Arial";
+                        ctx.textAlign = "center";
+                        ctx.fillText("PAUSE", canvas.width / 2, canvas.height / 2);
+                    } else {
+                        gameInterval = setInterval(moveDown, gameSpeed);
+                        pauseButton.textContent = "Pause";
+                        draw();
+                    }
+                }
+            }
+            
+            // Key handlers
+            document.addEventListener('keydown', function(e) {
+                if (!isPaused && !isGameOver) {
+                    switch (e.keyCode) {
+                        case 37: // Left
+                            moveLeft();
+                            break;
+                        case 38: // Up
+                            rotate();
+                            draw();
+                            break;
+                        case 39: // Right
+                            moveRight();
+                            break;
+                        case 40: // Down
+                            moveDown();
+                            break;
+                        case 32: // Space
+                            hardDrop();
+                            break;
+                    }
+                }
+            });
+            
+            // Button event listeners
+            startButton.addEventListener('click', startGame);
+            pauseButton.addEventListener('click', togglePause);
+            
+            // Initial draw
+            draw();
+            
+            // Show start screen
+            ctx.fillStyle = "#333";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#fff";
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("TETRIS", canvas.width / 2, canvas.height / 2 - 40);
+            ctx.font = "20px Arial";
+            ctx.fillText("Cliquez sur Démarrer pour jouer", canvas.width / 2, canvas.height / 2 + 40);
+        });
+    </script>
+</body>
+</html>

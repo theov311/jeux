@@ -3,828 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de Sudoku</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        button {
-            padding: 10px 15px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        
-        button:hover {
-            background-color: #45a049;
-        }
-        
-        #difficulty {
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        
-        .grid-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .sudoku-grid {
-            display: grid;
-            grid-template-columns: repeat(9, 50px);
-            grid-template-rows: repeat(9, 50px);
-            gap: 1px;
-            background-color: #333;
-            padding: 2px;
-            border: 2px solid #333;
-        }
-        
-        .cell {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: white;
-            font-size: 20px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            position: relative;
-        }
-        
-        .cell:hover {
-            background-color: #f0f0f0;
-        }
-        
-        .original {
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .user-input {
-            color: #1e88e5;
-        }
-        
-        .invalid {
-            color: #e53935;
-        }
-        
-        .highlighted {
-            background-color: #e3f2fd;
-        }
-        
-        .same-value {
-            background-color: #fff9c4;
-        }
-        
-        .block-divider-right {
-            border-right: 2px solid #333;
-        }
-        
-        .block-divider-bottom {
-            border-bottom: 2px solid #333;
-        }
-        
-        .number-pad {
-            display: grid;
-            grid-template-columns: repeat(3, 50px);
-            grid-template-rows: repeat(3, 50px);
-            gap: 5px;
-            margin-top: 20px;
-        }
-        
-        .number-btn {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #e0e0e0;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        
-        .number-btn:hover {
-            background-color: #bdbdbd;
-        }
-        
-        .note {
-            font-size: 10px;
-            position: absolute;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            width: 100%;
-            height: 100%;
-            text-align: center;
-        }
-        
-        .note-value {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #757575;
-        }
-        
-        .status {
-            margin-top: 10px;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .timer {
-            margin-top: 10px;
-            font-size: 18px;
-            color: #333;
-        }
-        
-        .help-toggle {
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .help-toggle label {
-            cursor: pointer;
-        }
-        
-        @media (max-width: 600px) {
-            .sudoku-grid {
-                grid-template-columns: repeat(9, 35px);
-                grid-template-rows: repeat(9, 35px);
-            }
-            
-            .number-pad {
-                grid-template-columns: repeat(3, 35px);
-                grid-template-rows: repeat(3, 35px);
-            }
-            
-            .cell {
-                font-size: 16px;
-            }
-        }
-    </style>
+    <title>Arcade de Jeux</title>
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <h1>Générateur de Sudoku</h1>
-    
-    <div class="controls">
-        <select id="difficulty">
-            <option value="easy">Facile</option>
-            <option value="medium">Moyen</option>
-            <option value="hard">Difficile</option>
-            <option value="expert">Expert</option>
-        </select>
-        <button id="new-game">Nouvelle partie</button>
-        <button id="solve">Résoudre</button>
-        <button id="check">Vérifier</button>
-        <button id="clear">Effacer</button>
-    </div>
-    
-    <div class="help-toggle">
-        <input type="checkbox" id="help-mode" checked>
-        <label for="help-mode">Mode aide</label>
-        <input type="checkbox" id="notes-mode">
-        <label for="notes-mode">Mode notes</label>
-    </div>
-    
-    <div class="timer">Temps: <span id="time">00:00</span></div>
-    
-    <div class="grid-container">
-        <div class="sudoku-grid" id="grid"></div>
-    </div>
-    
-    <div class="number-pad" id="number-pad">
-        <button class="number-btn" data-value="1">1</button>
-        <button class="number-btn" data-value="2">2</button>
-        <button class="number-btn" data-value="3">3</button>
-        <button class="number-btn" data-value="4">4</button>
-        <button class="number-btn" data-value="5">5</button>
-        <button class="number-btn" data-value="6">6</button>
-        <button class="number-btn" data-value="7">7</button>
-        <button class="number-btn" data-value="8">8</button>
-        <button class="number-btn" data-value="9">9</button>
-        <button class="number-btn" data-value="0">Effacer</button>
-    </div>
-    
-    <div class="status" id="status"></div>
+    <header>
+        <h1>Arcade de Jeux</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html" class="active">Accueil</a></li>
+                <li><a href="pages/sudoku.html">Sudoku</a></li>
+                <li><a href="pages/tetris.html">Tetris</a></li>
+                <li><a href="pages/memory.html">Memory</a></li>
+                <li><a href="pages/snake.html">Snake</a></li>
+                <li><a href="pages/feedback.html">Retour</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h2>Bienvenue dans notre collection de jeux classiques</h2>
+            <p>Choisissez parmi nos jeux et amusez-vous!</p>
+        </section>
+
+        <section class="games-grid">
+            <div class="game-card">
+                <img src="images/sudoku.png" alt="Sudoku" class="game-img">
+                <h3>Sudoku</h3>
+                <p>Résolvez des grilles de Sudoku de différentes difficultés avec notre générateur.</p>
+                <a href="pages/sudoku.html" class="btn">Jouer</a>
+            </div>
+
+            <div class="game-card">
+                <img src="images/tetris.png" alt="Tetris" class="game-img">
+                <h3>Tetris</h3>
+                <p>Le jeu de puzzle classique où vous devez empiler des blocs pour compléter des lignes.</p>
+                <a href="pages/tetris.html" class="btn">Jouer</a>
+            </div>
+
+            <div class="game-card">
+                <img src="images/memory.png" alt="Memory" class="game-img">
+                <h3>Memory</h3>
+                <p>Testez votre mémoire en trouvant des paires de cartes correspondantes.</p>
+                <a href="pages/memory.html" class="btn">Jouer</a>
+            </div>
+
+            <div class="game-card">
+                <img src="images/snake.png" alt="Snake" class="game-img">
+                <h3>Snake</h3>
+                <p>Dirigez le serpent pour manger des pommes et grandir sans vous mordre la queue.</p>
+                <a href="pages/snake.html" class="btn">Jouer</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Arcade de Jeux. Tous droits réservés.</p>
+        <p><a href="pages/feedback.html">Donnez-nous votre avis</a></p>
+    </footer>
     
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Variables globales
-            let grid = [];
-            let solution = [];
-            let selectedCell = null;
-            let timer = null;
-            let seconds = 0;
-            let gameStarted = false;
-            let helpMode = true;
-            let notesMode = false;
-            
-            // Éléments DOM
-            const gridElement = document.getElementById('grid');
-            const difficultySelect = document.getElementById('difficulty');
-            const newGameButton = document.getElementById('new-game');
-            const solveButton = document.getElementById('solve');
-            const checkButton = document.getElementById('check');
-            const clearButton = document.getElementById('clear');
-            const timeElement = document.getElementById('time');
-            const statusElement = document.getElementById('status');
-            const helpModeCheckbox = document.getElementById('help-mode');
-            const notesModeCheckbox = document.getElementById('notes-mode');
-            const numberPad = document.getElementById('number-pad');
-            
-            // Initialisation du jeu
-            initializeGrid();
-            generateNewGame();
-            
-            // Event listeners
-            newGameButton.addEventListener('click', generateNewGame);
-            solveButton.addEventListener('click', solvePuzzle);
-            checkButton.addEventListener('click', checkSolution);
-            clearButton.addEventListener('click', clearUserInputs);
-            helpModeCheckbox.addEventListener('change', () => {
-                helpMode = helpModeCheckbox.checked;
-                updateGrid();
+        // Pour les images placeholder
+        document.addEventListener('DOMContentLoaded', function() {
+            const gameImgs = document.querySelectorAll('.game-img');
+            gameImgs.forEach(img => {
+                // Création de canvas pour remplacer les images
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                
+                // Appliquer un style en fonction du jeu
+                const gameName = img.alt.toLowerCase();
+                if (gameName === 'sudoku') {
+                    // Fond bleu clair pour Sudoku
+                    ctx.fillStyle = '#b3d9ff';
+                    ctx.fillRect(0, 0, 300, 200);
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Sudoku', 150, 100);
+                } else if (gameName === 'tetris') {
+                    // Fond violet pour Tetris
+                    ctx.fillStyle = '#d9b3ff';
+                    ctx.fillRect(0, 0, 300, 200);
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Tetris', 150, 100);
+                } else if (gameName === 'memory') {
+                    // Fond vert clair pour Memory
+                    ctx.fillStyle = '#b3ffb3';
+                    ctx.fillRect(0, 0, 300, 200);
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Memory', 150, 100);
+                } else if (gameName === 'snake') {
+                    // Fond jaune clair pour Snake
+                    ctx.fillStyle = '#ffffb3';
+                    ctx.fillRect(0, 0, 300, 200);
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Snake', 150, 100);
+                }
+                
+                img.src = canvas.toDataURL();
             });
-            notesModeCheckbox.addEventListener('change', () => {
-                notesMode = notesModeCheckbox.checked;
-            });
-            
-            // Event listener pour les boutons du pavé numérique
-            numberPad.addEventListener('click', (e) => {
-                if (e.target.classList.contains('number-btn') && selectedCell) {
-                    const value = parseInt(e.target.dataset.value);
-                    
-                    if (isNaN(value)) {
-                        // Bouton effacer
-                        if (notesMode) {
-                            // Effacer toutes les notes
-                            for (let i = 1; i <= 9; i++) {
-                                selectedCell.querySelector(`.note-value[data-note="${i}"]`).textContent = '';
-                            }
-                        } else {
-                            selectedCell.textContent = '';
-                            selectedCell.classList.remove('user-input', 'invalid');
-                            const row = parseInt(selectedCell.dataset.row);
-                            const col = parseInt(selectedCell.dataset.col);
-                            grid[row][col] = 0;
-                        }
-                    } else if (notesMode) {
-                        // Mode notes: Ajouter/supprimer une note
-                        const noteElement = selectedCell.querySelector(`.note-value[data-note="${value}"]`);
-                        noteElement.textContent = noteElement.textContent ? '' : value;
-                    } else if (!selectedCell.classList.contains('original')) {
-                        // Mode normal: Entrer un chiffre
-                        const row = parseInt(selectedCell.dataset.row);
-                        const col = parseInt(selectedCell.dataset.col);
-                        
-                        selectedCell.textContent = value;
-                        selectedCell.classList.add('user-input');
-                        grid[row][col] = value;
-                        
-                        // Vérification si le mode d'aide est activé
-                        if (helpMode) {
-                            if (value !== solution[row][col]) {
-                                selectedCell.classList.add('invalid');
-                            } else {
-                                selectedCell.classList.remove('invalid');
-                            }
-                        }
-                        
-                        // Vérification si le puzzle est résolu
-                        if (isPuzzleSolved()) {
-                            endGame(true);
-                        }
-                    }
-                    
-                    // Mettre à jour la grille pour les surbrillances
-                    updateHighlights(selectedCell);
-                }
-            });
-            
-            // Fonctions du jeu
-            
-            // Initialisation de la grille vide
-            function initializeGrid() {
-                gridElement.innerHTML = '';
-                
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        const cell = document.createElement('div');
-                        cell.classList.add('cell');
-                        cell.dataset.row = i;
-                        cell.dataset.col = j;
-                        
-                        // Ajouter des bordures pour les blocs 3x3
-                        if ((j + 1) % 3 === 0 && j < 8) {
-                            cell.classList.add('block-divider-right');
-                        }
-                        if ((i + 1) % 3 === 0 && i < 8) {
-                            cell.classList.add('block-divider-bottom');
-                        }
-                        
-                        // Ajouter la structure pour les notes
-                        const noteContainer = document.createElement('div');
-                        noteContainer.classList.add('note');
-                        
-                        for (let n = 1; n <= 9; n++) {
-                            const noteValue = document.createElement('div');
-                            noteValue.classList.add('note-value');
-                            noteValue.dataset.note = n;
-                            noteContainer.appendChild(noteValue);
-                        }
-                        
-                        cell.appendChild(noteContainer);
-                        
-                        // Event listener pour la sélection de cellules
-                        cell.addEventListener('click', () => {
-                            // Désélectionner la cellule précédemment sélectionnée
-                            if (selectedCell) {
-                                selectedCell.classList.remove('highlighted');
-                                removeHighlights();
-                            }
-                            
-                            selectedCell = cell;
-                            cell.classList.add('highlighted');
-                            
-                            // Mettre en surbrillance les cellules associées
-                            updateHighlights(cell);
-                        });
-                        
-                        gridElement.appendChild(cell);
-                    }
-                }
-            }
-            
-            // Générer une nouvelle partie
-            function generateNewGame() {
-                // Réinitialiser le jeu
-                resetGame();
-                
-                // Générer une grille résolue
-                solution = generateSolvedGrid();
-                
-                // Créer une copie de la solution pour la grille de jeu
-                grid = JSON.parse(JSON.stringify(solution));
-                
-                // Retirer des chiffres selon la difficulté
-                removeNumbers(getDifficultyLevel());
-                
-                // Afficher la grille
-                updateGrid();
-                
-                // Démarrer le chronomètre
-                startTimer();
-                
-                gameStarted = true;
-                statusElement.textContent = "Bonne chance !";
-            }
-            
-            // Générer une grille résolue
-            function generateSolvedGrid() {
-                // Créer une grille vide
-                const solvedGrid = Array(9).fill().map(() => Array(9).fill(0));
-                
-                // Résoudre la grille
-                if (solveSudoku(solvedGrid)) {
-                    return solvedGrid;
-                }
-                
-                // En cas d'échec (ne devrait pas arriver), retourner une grille vide
-                return Array(9).fill().map(() => Array(9).fill(0));
-            }
-            
-            // Résoudre un Sudoku par backtracking
-            function solveSudoku(grid) {
-                // Trouver une cellule vide
-                const emptyCell = findEmptyCell(grid);
-                
-                // Si aucune cellule vide, la grille est résolue
-                if (!emptyCell) return true;
-                
-                const [row, col] = emptyCell;
-                
-                // Essayer chaque chiffre de 1 à 9
-                const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-                shuffleArray(numbers); // Mélanger pour plus de variété
-                
-                for (let num of numbers) {
-                    // Vérifier si le chiffre est valide
-                    if (isValidPlacement(grid, row, col, num)) {
-                        // Placer le chiffre
-                        grid[row][col] = num;
-                        
-                        // Continuer avec la cellule suivante
-                        if (solveSudoku(grid)) {
-                            return true;
-                        }
-                        
-                        // Si échec, annuler et essayer un autre chiffre
-                        grid[row][col] = 0;
-                    }
-                }
-                
-                // Aucune solution trouvée avec cette configuration
-                return false;
-            }
-            
-            // Trouver une cellule vide dans la grille
-            function findEmptyCell(grid) {
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        if (grid[i][j] === 0) {
-                            return [i, j];
-                        }
-                    }
-                }
-                return null;
-            }
-            
-            // Vérifier si un chiffre peut être placé dans une cellule
-            function isValidPlacement(grid, row, col, num) {
-                // Vérifier la ligne
-                for (let j = 0; j < 9; j++) {
-                    if (grid[row][j] === num) {
-                        return false;
-                    }
-                }
-                
-                // Vérifier la colonne
-                for (let i = 0; i < 9; i++) {
-                    if (grid[i][col] === num) {
-                        return false;
-                    }
-                }
-                
-                // Vérifier le bloc 3x3
-                const blockRow = Math.floor(row / 3) * 3;
-                const blockCol = Math.floor(col / 3) * 3;
-                
-                for (let i = 0; i < 3; i++) {
-                    for (let j = 0; j < 3; j++) {
-                        if (grid[blockRow + i][blockCol + j] === num) {
-                            return false;
-                        }
-                    }
-                }
-                
-                return true;
-            }
-            
-            // Mélanger un tableau
-            function shuffleArray(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [array[i], array[j]] = [array[j], array[i]];
-                }
-                return array;
-            }
-            
-            // Retirer des chiffres selon la difficulté
-            function removeNumbers(difficulty) {
-                const cells = [];
-                
-                // Créer une liste de toutes les cellules
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        cells.push([i, j]);
-                    }
-                }
-                
-                // Mélanger les cellules
-                shuffleArray(cells);
-                
-                // Nombre de cellules à vider
-                const cellsToRemove = difficulty;
-                
-                // Vider les cellules
-                for (let i = 0; i < cellsToRemove && i < cells.length; i++) {
-                    const [row, col] = cells[i];
-                    grid[row][col] = 0;
-                }
-            }
-            
-            // Obtenir le niveau de difficulté
-            function getDifficultyLevel() {
-                const difficulty = difficultySelect.value;
-                
-                switch (difficulty) {
-                    case 'easy':
-                        return 40; // 40 cellules vides
-                    case 'medium':
-                        return 50; // 50 cellules vides
-                    case 'hard':
-                        return 60; // 60 cellules vides
-                    case 'expert':
-                        return 65; // 65 cellules vides
-                    default:
-                        return 40;
-                }
-            }
-            
-            // Mettre à jour l'affichage de la grille
-            function updateGrid() {
-                const cells = gridElement.querySelectorAll('.cell');
-                
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        const index = i * 9 + j;
-                        const cell = cells[index];
-                        const value = grid[i][j];
-                        
-                        // Effacer les classes
-                        cell.classList.remove('original', 'user-input', 'invalid');
-                        
-                        // Effacer le contenu de la cellule
-                        cell.textContent = '';
-                        
-                        // Réinitialiser les notes
-                        const noteContainer = document.createElement('div');
-                        noteContainer.classList.add('note');
-                        
-                        for (let n = 1; n <= 9; n++) {
-                            const noteValue = document.createElement('div');
-                            noteValue.classList.add('note-value');
-                            noteValue.dataset.note = n;
-                            noteContainer.appendChild(noteValue);
-                        }
-                        
-                        cell.innerHTML = '';
-                        cell.appendChild(noteContainer);
-                        
-                        if (value !== 0) {
-                            // Afficher la valeur
-                            cell.textContent = value;
-                            
-                            // Les cellules de départ sont marquées comme "original"
-                            if (cell.dataset.original === "true") {
-                                cell.classList.add('original');
-                            } else {
-                                cell.classList.add('user-input');
-                                
-                                // Vérifier si la valeur est correcte (mode d'aide)
-                                if (helpMode && value !== solution[i][j]) {
-                                    cell.classList.add('invalid');
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Marquer les cellules originales
-                markOriginalCells();
-            }
-            
-            // Marquer les cellules originales
-            function markOriginalCells() {
-                const cells = gridElement.querySelectorAll('.cell');
-                
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        const index = i * 9 + j;
-                        const cell = cells[index];
-                        
-                        if (grid[i][j] !== 0) {
-                            cell.dataset.original = "true";
-                            cell.classList.add('original');
-                        } else {
-                            cell.dataset.original = "false";
-                        }
-                    }
-                }
-            }
-            
-            // Mettre à jour les surbrillances
-            function updateHighlights(cell) {
-                removeHighlights();
-                
-                if (!cell) return;
-                
-                const row = parseInt(cell.dataset.row);
-                const col = parseInt(cell.dataset.col);
-                const value = grid[row][col];
-                
-                const cells = gridElement.querySelectorAll('.cell');
-                
-                // Mettre en surbrillance la ligne, la colonne et le bloc
-                for (let i = 0; i < 9; i++) {
-                    // Ligne
-                    const rowIndex = row * 9 + i;
-                    if (rowIndex < cells.length) {
-                        cells[rowIndex].classList.add('highlighted');
-                    }
-                    
-                    // Colonne
-                    const colIndex = i * 9 + col;
-                    if (colIndex < cells.length) {
-                        cells[colIndex].classList.add('highlighted');
-                    }
-                }
-                
-                // Bloc 3x3
-                const blockRow = Math.floor(row / 3) * 3;
-                const blockCol = Math.floor(col / 3) * 3;
-                
-                for (let i = 0; i < 3; i++) {
-                    for (let j = 0; j < 3; j++) {
-                        const blockIndex = (blockRow + i) * 9 + (blockCol + j);
-                        if (blockIndex < cells.length) {
-                            cells[blockIndex].classList.add('highlighted');
-                        }
-                    }
-                }
-                
-                // Mettre en surbrillance les cellules avec la même valeur
-                if (value !== 0) {
-                    for (let i = 0; i < 9; i++) {
-                        for (let j = 0; j < 9; j++) {
-                            if (grid[i][j] === value) {
-                                const sameValueIndex = i * 9 + j;
-                                if (sameValueIndex < cells.length) {
-                                    cells[sameValueIndex].classList.add('same-value');
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // La cellule sélectionnée doit être plus en évidence
-                cell.classList.add('highlighted');
-            }
-            
-            // Supprimer toutes les surbrillances
-            function removeHighlights() {
-                const cells = gridElement.querySelectorAll('.cell');
-                cells.forEach(cell => {
-                    cell.classList.remove('highlighted', 'same-value');
-                });
-            }
-            
-            // Résoudre le puzzle
-            function solvePuzzle() {
-                // Afficher la solution
-                grid = JSON.parse(JSON.stringify(solution));
-                updateGrid();
-                
-                // Fin de la partie
-                endGame(false);
-                
-                statusElement.textContent = "Voici la solution !";
-            }
-            
-            // Vérifier la solution
-            function checkSolution() {
-                if (!gameStarted) {
-                    statusElement.textContent = "Veuillez démarrer une partie d'abord !";
-                    return;
-                }
-                
-                let isCorrect = true;
-                let isFilled = true;
-                
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        if (grid[i][j] === 0) {
-                            isFilled = false;
-                        } else if (grid[i][j] !== solution[i][j]) {
-                            isCorrect = false;
-                        }
-                    }
-                }
-                
-                if (!isFilled) {
-                    statusElement.textContent = "La grille n'est pas complètement remplie !";
-                } else if (!isCorrect) {
-                    statusElement.textContent = "Il y a des erreurs dans votre solution !";
-                } else {
-                    statusElement.textContent = "Félicitations ! Votre solution est correcte !";
-                    endGame(true);
-                }
-            }
-            
-            // Effacer les entrées de l'utilisateur
-            function clearUserInputs() {
-                const cells = gridElement.querySelectorAll('.cell');
-                
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        const index = i * 9 + j;
-                        const cell = cells[index];
-                        
-                        if (cell.dataset.original !== "true") {
-                            grid[i][j] = 0;
-                            cell.textContent = '';
-                            cell.classList.remove('user-input', 'invalid');
-                            
-                            // Réinitialiser les notes
-                            const noteContainer = document.createElement('div');
-                            noteContainer.classList.add('note');
-                            
-                            for (let n = 1; n <= 9; n++) {
-                                const noteValue = document.createElement('div');
-                                noteValue.classList.add('note-value');
-                                noteValue.dataset.note = n;
-                                noteContainer.appendChild(noteValue);
-                            }
-                            
-                            cell.innerHTML = '';
-                            cell.appendChild(noteContainer);
-                        }
-                    }
-                }
-            }
-            
-            // Vérifier si le puzzle est résolu
-            function isPuzzleSolved() {
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        if (grid[i][j] !== solution[i][j]) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-            
-            // Démarrer le chronomètre
-            function startTimer() {
-                // Arrêter le timer existant s'il y en a un
-                if (timer) {
-                    clearInterval(timer);
-                }
-                
-                // Réinitialiser le temps
-                seconds = 0;
-                timeElement.textContent = "00:00";
-                
-                // Démarrer un nouveau timer
-                timer = setInterval(() => {
-                    seconds++;
-                    const minutes = Math.floor(seconds / 60);
-                    const remainingSeconds = seconds % 60;
-                    timeElement.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-                }, 1000);
-            }
-            
-            // Arrêter le chronomètre
-            function stopTimer() {
-                if (timer) {
-                    clearInterval(timer);
-                    timer = null;
-                }
-            }
-            
-            // Fin de partie
-            function endGame(success) {
-                gameStarted = false;
-                stopTimer();
-                
-                if (success) {
-                    const time = timeElement.textContent;
-                    statusElement.textContent = `Félicitations ! Vous avez résolu le puzzle en ${time} !`;
-                }
-            }
-            
-            // Réinitialiser le jeu
-            function resetGame() {
-                // Arrêter le timer
-                stopTimer();
-                
-                // Réinitialiser les variables
-                grid = Array(9).fill().map(() => Array(9).fill(0));
-                solution = Array(9).fill().map(() => Array(9).fill(0));
-                selectedCell = null;
-                gameStarted = false;
-                
-                // Réinitialiser l'affichage
-                removeHighlights();
-                statusElement.textContent = "";
-                timeElement.textContent = "00:00";
-            }
         });
     </script>
 </body>
