@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory - Arcade de Jeux</title>
+    <link rel="stylesheet" href="../styles/main.css">
+    <style>
+        .memory-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .card {
+            aspect-ratio: 1;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+        }
+        
+        .card-front {
+            background-color: #4CAF50;
+            transform: rotateY(0deg);
+        }
+        
+        .card-back {
+            background-color: white;
+            transform: rotateY(180deg);
+            font-size: 2rem;
+        }
+        
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .card.matched {
+            background-color: #8bc34a;
+            cursor: default;
+        }
+        
+        .difficulty {
+            margin-bottom: 20px;
+        }
+        
+        @media (min-width: 600px) {
+            .memory-grid.medium {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            
+            .memory-grid.hard {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Arcade de Jeux</h1>
+        <nav>
+            <ul>
+                <li><a href="../index.html">Accueil</a></li>
+                <li><a href="sudoku.html">Sudoku</a></li>
+                <li><a href="tetris.html">Tetris</a></li>
+                <li><a href="memory.html" class="active">Memory</a></li>
+                <li><a href="snake.html">Snake</a></li>
+                <li><a href="feedback.html">Retour</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="game-container">
+            <h2 class="game-title">Memory</h2>
+            
+            <div class="memory-container">
+                <div class="game-info">
+                    <div class="moves">Coups: <span id="moves-count">0</span></div>
+                    <div class="timer">Temps: <span id="time">00:00</span></div>
+                    <div class="score">Score: <span id="score">0</span></div>
+                </div>
+                
+                <div class="difficulty">
+                    <label for="difficulty-select">Difficulté: </label>
+                    <select id="difficulty-select">
+                        <option value="easy">Facile (4x4)</option>
+                        <option value="medium">Moyen (5x4)</option>
+                        <option value="hard">Difficile (6x5)</option>
+                    </select>
+                </div>
+                
+                <div id="memory-grid" class="memory-grid"></div>
+                
+                <button id="start-button" class="btn">Nouvelle Partie</button>
+                <button id="restart-button" class="btn">Recommencer</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Arcade de Jeux. Tous droits réservés.</p>
+        <p><a href="feedback.html">Donnez-nous votre avis</a></p>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const memoryGrid = document.getElementById('memory-grid');
+            const movesCount = document.getElementById('moves-count');
+            const timeValue = document.getElementById('time');
+            const scoreValue = document.getElementById('score');
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
+            const difficultySelect = document.getElementById('difficulty-select');
+            
+            // Game variables
+            let cards = [];
+            let firstCard = null;
+            let secondCard = null;
+            let lockBoard = false;
+            let moves = 0;
+            let matches = 0;
+            let timer;
+            let seconds = 0;
+            let minutes = 0;
+            let score = 0;
+            let isPlaying = false;
+            
+            // Emojis for card faces (using emojis instead of images)
+            const emojis = [
+                '🍎', '🍌', '🍒', '🍊', '🍇', '🍓', '🍍', '🥝',
+                '🍉', '🥭', '🍑', '🍐', '🥥', '🍋', '🍈', '🍏',
+                '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'
+            ];
+            
+            // Game difficulty settings
+            const difficulties = {
+                easy: { rows: 4, cols: 4 },
+                medium: { rows: 4, cols: 5 },
+                hard: { rows: 5, cols: 6 }
+            };
+            
+            // Generate the memory cards
+            function generateCards(difficulty) {
+                const { rows, cols } = difficulties[difficulty];
+                const totalCards = rows * cols;
+                
+                // Make sure we have an even number of cards
+                if (totalCards % 2 !== 0) {
+                    console.error('Le nombre total de cartes doit être pair');
+                    return;
+                }
+                
+                // Clear the grid
+                memoryGrid.innerHTML = '';
+                memoryGrid.className = `memory-grid ${difficulty}`;
+                
+                // Set grid layout based on difficulty
+                if (difficulty === 'medium') {
+                    memoryGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+                } else if (difficulty === 'hard') {
+                    memoryGrid.style.gridTemplateColumns = 'repeat(6, 1fr)';
+                } else {
+                    memoryGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+                }
+                
+                // Select pairs of emojis for the game
+                const pairsNeeded = totalCards / 2;
+                const shuffledEmojis = [...emojis].sort(() => Math.random() - 0.5);
+                const selectedEmojis = shuffledEmojis.slice(0, pairsNeeded);
+                const cardEmojis = [...selectedEmojis, ...selectedEmojis];
+                
+                // Shuffle the cards
+                const shuffledCards = cardEmojis.sort(() => Math.random() - 0.5);
+                
+                // Create card elements
+                cards = [];
+                for (let i = 0; i < totalCards; i++) {
+                    createCard(i, shuffledCards[i]);
+                }
+            }
+            
+            // Create a card element
+            function createCard(index, emoji) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.index = index;
+                card.dataset.value = emoji;
+                
+                const cardFront = document.createElement('div');
+                cardFront.className = 'card-front';
+                
+                const cardBack = document.createElement('div');
+                cardBack.className = 'card-back';
+                cardBack.textContent = emoji;
+                
+                card.appendChild(cardFront);
+                card.appendChild(cardBack);
+                
+                card.addEventListener('click', flipCard);
+                memoryGrid.appendChild(card);
+                cards.push(card);
+            }
+            
+            // Flip card when clicked
+            function flipCard() {
+                if (lockBoard) return;
+                if (this === firstCard) return;
+                
+                this.classList.add('flipped');
+                
+                if (!firstCard) {
+                    // First click
+                    firstCard = this;
+                    
+                    // Start timer on first card click if not already started
+                    if (!isPlaying) {
+                        startTimer();
+                        isPlaying = true;
+                    }
+                    
+                    return;
+                }
+                
+                // Second click
+                secondCard = this;
+                moves++;
+                movesCount.textContent = moves;
+                
+                checkForMatch();
+            }
+            
+            // Check if the two flipped cards match
+            function checkForMatch() {
+                const isMatch = firstCard.dataset.value === secondCard.dataset.value;
+                
+                if (isMatch) {
+                    disableCards();
+                    updateScore();
+                } else {
+                    unflipCards();
+                }
+            }
+            
+            // Disable matched cards
+            function disableCards() {
+                firstCard.classList.add('matched');
+                secondCard.classList.add('matched');
+                
+                firstCard.removeEventListener('click', flipCard);
+                secondCard.removeEventListener('click', flipCard);
+                
+                matches++;
+                
+                // Check if all cards are matched
+                const { rows, cols } = difficulties[difficultySelect.value];
+                if (matches === (rows * cols) / 2) {
+                    setTimeout(() => {
+                        endGame();
+                    }, 500);
+                }
+                
+                resetBoard();
+            }
+            
+            // Unflip unmatched cards
+            function unflipCards() {
+                lockBoard = true;
+                
+                setTimeout(() => {
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    
+                    resetBoard();
+                }, 1000);
+            }
+            
+            // Reset board for next selection
+            function resetBoard() {
+                [firstCard, secondCard] = [null, null];
+                lockBoard = false;
+            }
+            
+            // Update score based on moves and time
+            function updateScore() {
+                const basePoints = 10;
+                const timePoints = Math.max(0, 100 - (minutes * 60 + seconds));
+                const movePoints = Math.max(0, 50 - moves);
+                
+                score += basePoints + timePoints + movePoints;
+                scoreValue.textContent = score;
+            }
+            
+            // Start timer
+            function startTimer() {
+                clearInterval(timer);
+                seconds = 0;
+                minutes = 0;
+                timeValue.textContent = '00:00';
+                
+                timer = setInterval(() => {
+                    seconds++;
+                    if (seconds === 60) {
+                        minutes++;
+                        seconds = 0;
+                    }
+                    
+                    // Format time as MM:SS
+                    const formattedTime = 
+                        (minutes < 10 ? '0' + minutes : minutes) + ':' + 
+                        (seconds < 10 ? '0' + seconds : seconds);
+                    
+                    timeValue.textContent = formattedTime;
+                }, 1000);
+            }
+            
+            // End game when all matches are found
+            function endGame() {
+                clearInterval(timer);
+                
+                // Create victory overlay
+                const overlay = document.createElement('div');
+                overlay.style.position = 'absolute';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.color = 'white';
+                overlay.style.fontSize = '24px';
+                overlay.style.zIndex = '10';
+                
+                const gameContainer = document.querySelector('.game-container');
+                gameContainer.style.position = 'relative';
+                
+                const victoryMessage = document.createElement('h3');
+                victoryMessage.textContent = 'Félicitations !';
+                victoryMessage.style.marginBottom = '10px';
+                
+                const statsMessage = document.createElement('p');
+                statsMessage.textContent = `Score: ${score} | Temps: ${timeValue.textContent} | Coups: ${moves}`;
+                statsMessage.style.marginBottom = '20px';
+                
+                const playAgainButton = document.createElement('button');
+                playAgainButton.textContent = 'Rejouer';
+                playAgainButton.className = 'btn';
+                playAgainButton.addEventListener('click', () => {
+                    gameContainer.removeChild(overlay);
+                    gameContainer.style.position = '';
+                    startGame();
+                });
+                
+                overlay.appendChild(victoryMessage);
+                overlay.appendChild(statsMessage);
+                overlay.appendChild(playAgainButton);
+                
+                gameContainer.appendChild(overlay);
+            }
+            
+            // Start a new game
+            function startGame() {
+                // Reset game state
+                moves = 0;
+                matches = 0;
+                score = 0;
+                isPlaying = false;
+                
+                movesCount.textContent = moves;
+                scoreValue.textContent = score;
+                
+                clearInterval(timer);
+                timeValue.textContent = '00:00';
+                
+                // Generate cards based on selected difficulty
+                generateCards(difficultySelect.value);
+                
+                // Add initial animation to show cards briefly
+                setTimeout(() => {
+                    cards.forEach(card => card.classList.add('flipped'));
+                    
+                    setTimeout(() => {
+                        cards.forEach(card => card.classList.remove('flipped'));
+                    }, 2000);
+                }, 500);
+            }
+            
+            // Event listeners
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', startGame);
+            difficultySelect.addEventListener('change', () => {
+                if (isPlaying) {
+                    if (confirm('Êtes-vous sûr de vouloir changer la difficulté ? Votre partie en cours sera perdue.')) {
+                        startGame();
+                    } else {
+                        // Reset to previous selection
+                        const difficulty = memoryGrid.className.replace('memory-grid ', '');
+                        difficultySelect.value = difficulty || 'easy';
+                    }
+                } else {
+                    startGame();
+                }
+            });
+            
+            // Initialize game
+            startGame();
+        });
+    </script>
+</body>
+</html>
